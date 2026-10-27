@@ -5,5 +5,9 @@
         <attr name="min" format="integer" />
         <attr name="text" format="string" />
         <attr name="progress" format="integer" />
+        <!-- 是否显示可直接输入数值的输入框（默认不显示，保持其他设置原样） -->
+        <attr name="editable" format="boolean" />
+        <!-- +/- 按钮的步进，默认 1，保持其他设置原样 -->
+        <attr name="step" format="integer" />
     </declare-styleable>
 </resources>
