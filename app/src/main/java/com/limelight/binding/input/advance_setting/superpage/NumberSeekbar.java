@@ -28,8 +28,9 @@ public class NumberSeekbar extends LinearLayout {
 
     // 默认步进保持 1，保证未显式配置步进的设置行为不变
     private int step = 1;
-    // 输入框是否在值变化时同步刷新，防止用户正在输入时被打断
+    // 值变化是否正由输入框触发，用于避免回写输入框打断用户输入
     private boolean syncingInput = false;
+    private boolean applyingFromInput = false;
 
     public interface OnNumberSeekbarChangeListener{
         void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser);
@@ -184,12 +185,8 @@ public class NumberSeekbar extends LinearLayout {
             public void onClick(View v) {
                 int progress = numberSeekbarSeekbar.getProgress();
                 if (progress > numberSeekbarSeekbar.getMin()) {
-                    if (onNumberSeekbarChangeListener != null){
-                        onNumberSeekbarChangeListener.onStartTrackingTouch(numberSeekbarSeekbar);
-                        numberSeekbarSeekbar.setProgress(Math.max(progress - step, numberSeekbarSeekbar.getMin()));
-                        onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
-                    }
-
+                    int target = Math.max(progress - step, numberSeekbarSeekbar.getMin());
+                    setProgressByUser(target);
                 }
             }
         });
@@ -199,13 +196,23 @@ public class NumberSeekbar extends LinearLayout {
             public void onClick(View v) {
                 int progress = numberSeekbarSeekbar.getProgress();
                 if (progress < numberSeekbarSeekbar.getMax()) {
-                    numberSeekbarSeekbar.setProgress(Math.min(progress + step, numberSeekbarSeekbar.getMax()));
-                    if (onNumberSeekbarChangeListener != null){
-                        onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
-                    }
+                    int target = Math.min(progress + step, numberSeekbarSeekbar.getMax());
+                    setProgressByUser(target);
                 }
             }
         });
+    }
+
+    // 由 +/- 按钮或滑杆等界面操作改变数值，需要同步刷新输入框
+    private void setProgressByUser(int target) {
+        if (onNumberSeekbarChangeListener != null){
+            onNumberSeekbarChangeListener.onStartTrackingTouch(numberSeekbarSeekbar);
+            numberSeekbarSeekbar.setProgress(target);
+            onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
+        } else {
+            numberSeekbarSeekbar.setProgress(target);
+        }
+        syncInput(target);
     }
 
     private static Integer parseInput(String text) {
@@ -231,12 +238,18 @@ public class NumberSeekbar extends LinearLayout {
         if (numberSeekbarSeekbar.getProgress() == clamped) {
             return;
         }
-        if (onNumberSeekbarChangeListener != null){
-            onNumberSeekbarChangeListener.onStartTrackingTouch(numberSeekbarSeekbar);
-            numberSeekbarSeekbar.setProgress(clamped);
-            onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
-        } else {
-            numberSeekbarSeekbar.setProgress(clamped);
+        // 标记当前进度变化来自输入框，避免回写打断用户输入
+        applyingFromInput = true;
+        try {
+            if (onNumberSeekbarChangeListener != null){
+                onNumberSeekbarChangeListener.onStartTrackingTouch(numberSeekbarSeekbar);
+                numberSeekbarSeekbar.setProgress(clamped);
+                onNumberSeekbarChangeListener.onStopTrackingTouch(numberSeekbarSeekbar);
+            } else {
+                numberSeekbarSeekbar.setProgress(clamped);
+            }
+        } finally {
+            applyingFromInput = false;
         }
     }
 
@@ -260,8 +273,8 @@ public class NumberSeekbar extends LinearLayout {
         if (numberSeekbarInput == null || numberSeekbarInput.getVisibility() != VISIBLE) {
             return;
         }
-        // 用户正在输入时不被滑杆/按钮覆盖
-        if (numberSeekbarInput.hasFocus()) {
+        // 由输入框本身触发的进度变化不回写输入框，否则会打断用户输入
+        if (applyingFromInput) {
             return;
         }
         syncInputText(String.valueOf(progress));
