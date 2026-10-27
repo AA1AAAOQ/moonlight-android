@@ -59,6 +59,14 @@ public class PageSuperMenuController {
                 controllerManager.getElementController().open();
             }
         });
+        superMenuPage.findViewById(R.id.page_super_menu_keyboard).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                controllerManager.getKeyboardUIController().toggle();
+                // 收起菜单，回到无页面状态
+                superPagesController.openNewPage(pageNull);
+            }
+        });
         superMenuPage.findViewById(R.id.page_super_menu_disconnect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

@@ -77,6 +77,7 @@ import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
@@ -1377,6 +1378,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return false;
         }
 
+        // 设置页输入框正在接收输入时，退格、回车等按键必须留给本机输入法处理，
+        // 否则会被当作串流按键发给主机（例如退格会导致游戏内弹出暂停菜单）
+        if (isKeyboardForwardingSuppressed(event)) {
+            return true;
+        }
+
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
@@ -1459,6 +1466,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             return false;
         }
 
+        // 与 handleKeyDown 一致：输入框聚焦期间不把按键事件转发给主机
+        if (isKeyboardForwardingSuppressed(event)) {
+            return true;
+        }
+
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
         int eventSource = event.getSource();
@@ -1517,6 +1529,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private boolean handleKeyMultiple(KeyEvent event) {
+        // 输入框聚焦期间，软键盘输入的文字同样属于本机输入
+        if (isKeyboardForwardingSuppressed(event)) {
+            return true;
+        }
+
         // We can receive keys from a software keyboard that don't correspond to any existing
         // KEYCODE value. Android will give those to us as an ACTION_MULTIPLE KeyEvent.
         //
@@ -1573,6 +1590,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         LimeLog.info("Toggling keyboard overlay");
         InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputManager.toggleSoftInput(0, 0);
+    }
+
+    /**
+     * 设置页输入框正在接收本机输入时，按键不能转发给串流主机。
+     * 直接依据当前焦点判断，避免开关状态残留导致按键永久失效。
+     */
+    private boolean isKeyboardForwardingSuppressed(KeyEvent event) {
+        // 返回键必须放行，否则输入框聚焦时无法用返回键收起输入法
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+            return false;
+        }
+        View focus = getCurrentFocus();
+        return focus instanceof EditText && focus.isShown();
     }
 
     private byte getLiTouchTypeFromEvent(MotionEvent event) {

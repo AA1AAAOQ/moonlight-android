@@ -83,7 +83,7 @@
                 android:layout_marginVertical="5dp"
                 app:text="触控板灵敏度"
                 app:max="5000"
-                app:min="1"
+                app:min="0"
                 app:progress="100"
                 app:editable="true"
                 app:step="100" />

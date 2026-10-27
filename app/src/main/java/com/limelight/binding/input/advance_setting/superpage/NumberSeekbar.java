@@ -147,6 +147,7 @@ public class NumberSeekbar extends LinearLayout {
                     commitInput(true);
                     hideKeyboard(v);
                     v.clearFocus();
+                    // 消费掉回车本身，避免这个按键被转发给串流主机
                     return true;
                 }
                 return false;
